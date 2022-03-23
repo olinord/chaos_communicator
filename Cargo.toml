@@ -1,0 +1,15 @@
+[package]
+name = "chaos_communicator"
+version = "0.1.0"
+edition = "2018"
+authors = ["Ólafur Þór Gunnarsson <olinord@gmail.com>"]
+
+[dependencies]
+crossbeam-channel = "0.5"
+
+[dev-dependencies]
+criterion = "0.3"
+
+[[bench]]
+name = "message_bench"
+harness = false
