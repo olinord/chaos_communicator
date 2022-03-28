@@ -65,5 +65,19 @@ mod tests {
         let message  = ChaosMessageBuilder::new().with_param::<i32>("test", 1123).build();
         assert_eq!(message.get::<i32>("test"), Some(1123));
     }
+
+    #[test]
+    fn message_can_have_multiple_parameters() {
+        let message = ChaosMessageBuilder::new().
+            with_param::<i32>("id", 1123).
+            with_param::<u8>("age", 40).
+            with_param::<&'static str>("name", "John Doe").
+            build();
+
+        assert_eq!(message.get::<i32>("id"), Some(1123));
+        assert_eq!(message.get::<u8>("age"), Some(40));
+        assert_eq!(message.get::<&'static str>("name"), Some("John Doe"));
+
+    }
 }
 

@@ -41,9 +41,9 @@ impl ChaosCommunicator {
         }
     }
 
-    pub fn send_message<T: Any + Hash + Display + Copy>(&self, event: T, message: ChaosMessage) -> Result<(), ChaosCommunicationError> {
+    pub fn send_message<T: Any + Hash + Display>(&self, event: T, message: ChaosMessage) -> Result<(), ChaosCommunicationError> {
         let mut hasher = DefaultHasher::new();
-        event.hash(&mut hasher );
+        event.hash(&mut hasher);
         let hash_value = hasher.finish();
 
         // find the channel to post on
@@ -71,6 +71,7 @@ mod tests {
     use std::thread;
     use crate::message::ChaosMessageBuilder;
     use super::*;
+    use std::fmt;
 
     #[test]
     fn message_can_be_sent_to_listeners() {
@@ -84,6 +85,31 @@ mod tests {
 
         assert_eq!(r.is_empty(), false);
         assert_eq!(r.recv().unwrap().get("test"), Some(1123));
+    }
+
+    #[derive(Hash)]
+    enum TestEnumEvent{
+        Event1 = 1
+    }
+
+    impl fmt::Display for TestEnumEvent {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            write!(f, "{}", self)
+        }
+    }
+
+    #[test]
+    fn message_can_be_registered_for_enum() {
+        let mut communicator = ChaosCommunicator::new();
+        let r = communicator.register_for(TestEnumEvent::Event1);
+
+        thread::spawn(move || {
+            let message = ChaosMessageBuilder::new().with_param("some_parameter", 1234).build();
+            assert_eq!(communicator.send_message(TestEnumEvent::Event1, message).is_ok(), true);
+        }).join().unwrap();
+
+        assert_eq!(r.is_empty(), false);
+        assert_eq!(r.recv().unwrap().get("some_parameter"), Some(1234));
     }
 
     #[test]
