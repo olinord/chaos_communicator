@@ -1,8 +1,8 @@
 # chaos_communicator
-A simple message sending arbitrary messages from one thread and 
-receiving them else were for rust
+A simple message sending and receiving library, written in rust, allowing for sending arbitrary messages from one thread and 
+receiving them elsewere.
 
-Uses crossbeam to do the heavy lifting (message receive and sending)
+Uses [crossbeam](https://github.com/crossbeam-rs/crossbeam) to do the heavy lifting (message receive and sending)
 
 
 ### Usage
