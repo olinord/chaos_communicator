@@ -30,17 +30,17 @@ let receiver2 = communicator.register_for(AppEvent::InterestingEvent);
 let receiver3 = communicator.register_for("event string");
 ```
 And finally to send an event we can send arbitrary data over the wire. 
-But to do that we need to construct a message
+But to do that we need to construct a message and build it for a specific event
 ```rust
 let message = ChaosMessageBuilder::new().
         with_param::<i32>("id", 1123).
         with_param::<u8>("age", 40).
         with_param::<&'static str>("name", "John Doe").
-        build();
+        build(AppEvent::InterestingEvent);
 ```
 Which we can then send
 ```rust
-communicator.send_message(AppEvent::InterestingEvent, message);
+communicator.send_message(message);
 ```
 And receive
 ```rust
