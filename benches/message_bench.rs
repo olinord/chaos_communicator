@@ -13,7 +13,7 @@ fn message_parameter_generation(c: &mut Criterion) {
     c.bench_function("message parameter creation",
                      |b| b.iter(||
                                     {
-                                        ChaosMessageBuilder::new().with_param::<i32>("test", black_box(1123)).build()
+                                        ChaosMessageBuilder::new().with_param::<i32>("test", black_box(1123)).build("test message")
                                     }
     ));
 }
@@ -25,8 +25,8 @@ fn communicator_send_message(c: &mut Criterion) {
     c.bench_function("communicator sending message",
                      |b| b.iter(||
                          {
-                             let message  = ChaosMessageBuilder::new().with_param::<i32>("test", 1123).build();
-                             communicator.send_message(987654321, message)
+                             let message  = ChaosMessageBuilder::new().with_param::<i32>("test", 1123).build(987654321);
+                             communicator.send_message( message)
                          }
                      ));
 }

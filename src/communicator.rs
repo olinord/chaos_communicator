@@ -41,13 +41,10 @@ impl ChaosCommunicator {
         }
     }
 
-    pub fn send_message<T: Any + Hash + Display>(&self, event: T, message: ChaosMessage) -> Result<(), ChaosCommunicationError> {
-        let mut hasher = DefaultHasher::new();
-        event.hash(&mut hasher);
-        let hash_value = hasher.finish();
-
+    pub fn send_message(&self, message: ChaosMessage) -> Result<(), ChaosCommunicationError> {
         // find the channel to post on
-        match self.senders_and_receivers.get(&hash_value)
+        let event = message.get_event();
+        match self.senders_and_receivers.get(&message.get_event())
         {
             Some((sender, _)) => {
                 let result = sender.send(message);
@@ -79,8 +76,8 @@ mod tests {
         let r = communicator.register_for(987654321);
 
         thread::spawn(move || {
-            let message = ChaosMessageBuilder::new().with_param("test", 1123).build();
-            assert_eq!(communicator.send_message(987654321, message).is_ok(), true);
+            let message = ChaosMessageBuilder::new().with_param("test", 1123).build_for_event(987654321);
+            assert_eq!(communicator.send_message( message).is_ok(), true);
         }).join().unwrap();
 
         assert_eq!(r.is_empty(), false);
@@ -104,8 +101,10 @@ mod tests {
         let r = communicator.register_for(TestEnumEvent::Event1);
 
         thread::spawn(move || {
-            let message = ChaosMessageBuilder::new().with_param("some_parameter", 1234).build();
-            assert_eq!(communicator.send_message(TestEnumEvent::Event1, message).is_ok(), true);
+            let message = ChaosMessageBuilder::new().
+                with_param("some_parameter", 1234).
+                build_for_event(TestEnumEvent::Event1);
+            assert_eq!(communicator.send_message(message).is_ok(), true);
         }).join().unwrap();
 
         assert_eq!(r.is_empty(), false);
@@ -115,7 +114,9 @@ mod tests {
     #[test]
     fn sending_event_that_hasnt_been_registered_returns_error(){
         let communicator = ChaosCommunicator::new();
-        let result = communicator.send_message("I dont exist", ChaosMessageBuilder::new().build());
+        let result = communicator.send_message(
+            ChaosMessageBuilder::new().build_for_event("I dont exist")
+        );
 
         assert_eq!(result.is_err(), true);
     }

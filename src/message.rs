@@ -1,7 +1,10 @@
 use std::any::{Any, TypeId};
+use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
+use std::fmt::Display;
 use std::string::{String};
 use std::sync::Arc;
+use std::hash::{Hash, Hasher};
 
 // Message that contains a piece of data
 // this data can be anything
@@ -10,6 +13,7 @@ pub struct ChaosMessageBuilder {
 }
 
 pub struct ChaosMessage {
+    event_hash: u64,
     data: HashMap<String, (TypeId, Arc<Box<dyn Any>>)>
 }
 
@@ -25,9 +29,14 @@ impl ChaosMessageBuilder {
         return self;
     }
 
-    pub fn build(self) -> ChaosMessage {
+    pub fn build_for_event<T: Any + Hash + Display>(self, event: T) -> ChaosMessage {
+        let mut hasher = DefaultHasher::new();
+        event.hash( &mut hasher );
+        let hash_value = hasher.finish();
+
         return ChaosMessage {
-            data: self.data
+            data: self.data,
+            event_hash: hash_value
         }
     }
 }
@@ -48,6 +57,10 @@ impl ChaosMessage {
             None => None
         }
     }
+
+    pub fn get_event(&self) -> u64 {
+        self.event_hash
+    }
 }
 
 unsafe impl Send for ChaosMessage {}
@@ -62,7 +75,7 @@ mod tests {
 
     #[test]
     fn message_can_retieve_parameter_by_name() {
-        let message  = ChaosMessageBuilder::new().with_param::<i32>("test", 1123).build();
+        let message  = ChaosMessageBuilder::new().with_param::<i32>("test", 1123).build_for_event("test_event");
         assert_eq!(message.get::<i32>("test"), Some(1123));
     }
 
@@ -72,7 +85,7 @@ mod tests {
             with_param::<i32>("id", 1123).
             with_param::<u8>("age", 40).
             with_param::<&'static str>("name", "John Doe").
-            build();
+            build_for_event("test_case" );
 
         assert_eq!(message.get::<i32>("id"), Some(1123));
         assert_eq!(message.get::<u8>("age"), Some(40));
