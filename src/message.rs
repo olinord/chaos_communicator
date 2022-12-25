@@ -12,6 +12,7 @@ pub struct ChaosMessageBuilder {
     data: HashMap<String, (TypeId, Arc<Box<dyn Any>>)>
 }
 
+#[derive(Clone)]
 pub struct ChaosMessage {
     event_hash: u64,
     data: HashMap<String, (TypeId, Arc<Box<dyn Any>>)>

@@ -1,14 +1,14 @@
-use std::any::{Any};
 use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
-use std::fmt::Display;
 use std::hash::{Hash, Hasher};
 use crossbeam_channel::{Sender, Receiver, unbounded};
 use crate::communicator::ChaosCommunicationError::{CouldNotSendMessage, NoSenderFound};
 use crate::message::ChaosMessage;
 
+#[derive(Clone)]
 pub struct ChaosCommunicator {
-    senders_and_receivers: HashMap<u64, (Sender<ChaosMessage>, Receiver<ChaosMessage>)>
+    senders_and_receivers: HashMap<u64, (Sender<ChaosMessage>, Receiver<ChaosMessage>)>,
+    stored_messages: Vec<ChaosMessage>
 }
 
 pub enum ChaosCommunicationError {
@@ -19,11 +19,12 @@ pub enum ChaosCommunicationError {
 impl ChaosCommunicator {
     pub fn new() -> Self {
         ChaosCommunicator{
-            senders_and_receivers: HashMap::new()
+            senders_and_receivers: HashMap::new(),
+            stored_messages: Vec::new()
         }
     }
 
-    pub fn register_for<T: Any + Hash + Display>(&mut self, event: T) -> Receiver<ChaosMessage>{
+    pub fn register_for<T: Hash>(&mut self, event: T) -> Receiver<ChaosMessage>{
         let mut hasher = DefaultHasher::new();
         event.hash(&mut hasher );
         let hash_value = hasher.finish();
@@ -52,7 +53,7 @@ impl ChaosCommunicator {
                     // Could not send the error for some reason
                     let message = format!(
                         "Message could not be sent for event {}. Likely due to channel being closed.", event);
-                    return Err(CouldNotSendMessage(message))
+                    return Err(CouldNotSendMessage(message));
                 }
                 return Ok(());
             },
@@ -60,6 +61,10 @@ impl ChaosCommunicator {
                 return Err(NoSenderFound(format!("No sender found for event {}", event)))
             }
         }
+    }
+
+    pub fn store_message(&mut self, message: ChaosMessage) {
+        self.stored_messages.push(message);
     }
 }
 
@@ -109,6 +114,25 @@ mod tests {
 
         assert_eq!(r.is_empty(), false);
         assert_eq!(r.recv().unwrap().get("some_parameter"), Some(1234));
+    }
+
+    #[test]
+    fn multiple_receivers_can_be_registered_for_the_same_event() {
+        let mut communicator = ChaosCommunicator::new();
+        let r1 = communicator.register_for(TestEnumEvent::Event1);
+        let r2 = communicator.register_for(TestEnumEvent::Event1);
+
+        thread::spawn(move || {
+            let message = ChaosMessageBuilder::new().
+                with_param("some_parameter", 1234).
+                build_for_event(TestEnumEvent::Event1);
+            assert_eq!(communicator.send_message(message).is_ok(), true);
+        }).join().unwrap();
+
+        assert_eq!(r1.is_empty(), false);
+        assert_eq!(r2.is_empty(), false);
+        assert_eq!(r1.recv().unwrap().get("some_parameter"), Some(1234));
+        assert_eq!(r2.recv().unwrap().get("some_parameter"), Some(1234));
     }
 
     #[test]
