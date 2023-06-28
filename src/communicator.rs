@@ -5,9 +5,12 @@ use crossbeam_channel::{Sender, Receiver, unbounded};
 use crate::communicator::ChaosCommunicationError::{CouldNotSendMessage, NoSenderFound};
 use crate::message::ChaosMessage;
 
+type ChaosReceiver = Receiver<ChaosMessage>;
+type ChaosSender = Sender<ChaosMessage>;
+
 #[derive(Clone)]
 pub struct ChaosCommunicator {
-    senders_and_receivers: HashMap<u64, (Sender<ChaosMessage>, Receiver<ChaosMessage>)>,
+    senders_and_receivers: HashMap<u64, (ChaosSender, ChaosReceiver)>,
     stored_messages: Vec<ChaosMessage>
 }
 
@@ -24,7 +27,7 @@ impl ChaosCommunicator {
         }
     }
 
-    pub fn register_for<T: Hash>(&mut self, event: T) -> Receiver<ChaosMessage>{
+    pub fn register_for<T: Hash>(&mut self, event: T) -> ChaosReceiver{
         let mut hasher = DefaultHasher::new();
         event.hash(&mut hasher );
         let hash_value = hasher.finish();
