@@ -1,8 +1,8 @@
 use crate::communicator::ChaosCommunicationError::{CouldNotSendMessage, NoSenderFound};
 use crate::message::ChaosMessage;
-use crossbeam_channel::{unbounded, Receiver, Sender};
-use std::collections::hash_map::DefaultHasher;
+use crossbeam_channel::{Receiver, Sender, unbounded};
 use std::collections::HashMap;
+use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
 #[derive(Clone)]
@@ -13,19 +13,22 @@ pub struct ChaosReceiver {
 impl ChaosReceiver {
     pub fn receive(&mut self) -> Option<ChaosMessage> {
         if self.receiver.is_empty() {
+            println!("Receiver is empty");
             return None;
         }
         let message = self.receiver.recv();
         if let Ok(message) = message {
+            println!("Message received");
             return Some(message);
         }
+        println!("Failed to receive message");
         return None;
     }
 }
 
 #[derive(Clone)]
 pub struct ChaosCommunicator {
-    senders_and_receivers: HashMap<u64, (Sender<ChaosMessage>, Receiver<ChaosMessage>)>,
+    senders_and_receivers: HashMap<u64, Vec<(Sender<ChaosMessage>, Receiver<ChaosMessage>)>>,
     stored_messages: Vec<ChaosMessage>,
 }
 
@@ -47,35 +50,38 @@ impl ChaosCommunicator {
         event.hash(&mut hasher);
         let hash_value = hasher.finish();
 
-        match self.senders_and_receivers.get(&hash_value) {
-            Some((_, receiver)) => {
-                return ChaosReceiver {
-                    receiver: receiver.clone(),
-                };
+        let (sender, receiver) = unbounded::<ChaosMessage>();
+        let receiver_clone = receiver.clone();
+        match self.senders_and_receivers.get_mut(&hash_value) {
+            Some(vec) => {
+                vec.push((sender, receiver));
             }
             None => {
-                let (sender, receiver) = unbounded::<ChaosMessage>();
-                let receiver_clone = receiver.clone();
                 self.senders_and_receivers
-                    .insert(hash_value, (sender, receiver));
-                return ChaosReceiver {
-                    receiver: receiver_clone,
-                };
+                    .insert(hash_value, vec![(sender, receiver)]);
             }
         }
+
+        return ChaosReceiver {
+            receiver: receiver_clone,
+        };
     }
 
     pub fn send_message(&self, message: ChaosMessage) -> Result<(), ChaosCommunicationError> {
         // find the channel to post on
         let event = message.get_event();
         match self.senders_and_receivers.get(&message.get_event()) {
-            Some((sender, _)) => {
-                let result = sender.send(message);
-                if result.is_err() {
-                    // Could not send the error for some reason
-                    let message = format!(
-                        "Message could not be sent for event {}. Likely due to channel being closed.", event);
-                    return Err(CouldNotSendMessage(message));
+            Some(senders_and_receivers) => {
+                for (sender, _receiver) in senders_and_receivers {
+                    let result = sender.send(message.clone());
+                    if result.is_err() {
+                        // Could not send the error for some reason
+                        let message = format!(
+                            "Message could not be sent for event {}. Likely due to channel being closed.",
+                            event
+                        );
+                        return Err(CouldNotSendMessage(message));
+                    }
                 }
                 return Ok(());
             }
@@ -83,7 +89,7 @@ impl ChaosCommunicator {
                 return Err(NoSenderFound(format!(
                     "No sender found for event {}",
                     event
-                )))
+                )));
             }
         }
     }
