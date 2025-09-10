@@ -29,7 +29,6 @@ impl ChaosReceiver {
 #[derive(Clone)]
 pub struct ChaosCommunicator {
     senders_and_receivers: HashMap<u64, Vec<(Sender<ChaosMessage>, Receiver<ChaosMessage>)>>,
-    stored_messages: Vec<ChaosMessage>,
 }
 
 pub enum ChaosCommunicationError {
@@ -41,7 +40,6 @@ impl ChaosCommunicator {
     pub fn new() -> Self {
         ChaosCommunicator {
             senders_and_receivers: HashMap::new(),
-            stored_messages: Vec::new(),
         }
     }
 
@@ -92,10 +90,6 @@ impl ChaosCommunicator {
                 )));
             }
         }
-    }
-
-    pub fn store_message(&mut self, message: ChaosMessage) {
-        self.stored_messages.push(message);
     }
 }
 
