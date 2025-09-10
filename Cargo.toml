@@ -5,7 +5,7 @@ edition = "2024"
 authors = ["Ólafur Þór Gunnarsson <olinord@gmail.com>"]
 
 [dependencies]
-crossbeam-channel = "0.8.4"
+crossbeam-channel = "0.5.15"
 
 [dev-dependencies]
 criterion = "0.7"
