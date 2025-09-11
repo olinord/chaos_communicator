@@ -3,6 +3,7 @@ use crate::message::ChaosMessage;
 use crossbeam_channel::{Receiver, Sender, unbounded};
 use std::collections::HashMap;
 use std::collections::hash_map::DefaultHasher;
+use std::fmt::Display;
 use std::hash::{Hash, Hasher};
 
 #[derive(Clone)]
@@ -29,11 +30,6 @@ impl ChaosReceiver {
 #[derive(Clone)]
 pub struct ChaosCommunicator {
     senders_and_receivers: HashMap<u64, Vec<(Sender<ChaosMessage>, Receiver<ChaosMessage>)>>,
-}
-
-pub enum ChaosCommunicationError {
-    CouldNotSendMessage(String),
-    NoSenderFound(String),
 }
 
 impl ChaosCommunicator {
@@ -93,6 +89,22 @@ impl ChaosCommunicator {
     }
 }
 
+#[derive(Debug, Clone)]
+pub enum ChaosCommunicationError {
+    CouldNotSendMessage(String),
+    NoSenderFound(String),
+}
+
+impl Display for ChaosCommunicationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ChaosCommunicationError::CouldNotSendMessage(msg) => {
+                write!(f, "Could not send message: {}", msg)
+            }
+            ChaosCommunicationError::NoSenderFound(msg) => write!(f, "No sender found: {}", msg),
+        }
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;
