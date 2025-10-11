@@ -1,7 +1,6 @@
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
 use std::collections::hash_map::DefaultHasher;
-use std::fmt::Display;
 use std::hash::{Hash, Hasher};
 use std::string::String;
 use std::sync::Arc;
@@ -37,7 +36,7 @@ impl ChaosMessageBuilder {
         return self;
     }
 
-    pub fn build_for_event<T: Any + Hash + Display>(self, event: T) -> ChaosMessage {
+    pub fn build_for_event<T: Any + Hash>(self, event: T) -> ChaosMessage {
         let mut hasher = DefaultHasher::new();
         event.hash(&mut hasher);
         let hash_value = hasher.finish();
