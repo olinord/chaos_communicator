@@ -14,15 +14,12 @@ pub struct ChaosReceiver {
 impl ChaosReceiver {
     pub fn receive(&mut self) -> Option<ChaosMessage> {
         if self.receiver.is_empty() {
-            println!("Receiver is empty");
             return None;
         }
         let message = self.receiver.recv();
         if let Ok(message) = message {
-            println!("Message received");
             return Some(message);
         }
-        println!("Failed to receive message");
         return None;
     }
 }
@@ -191,5 +188,32 @@ mod tests {
             communicator.send_message(ChaosMessageBuilder::new().build_for_event("I dont exist"));
 
         assert_eq!(result.is_err(), true);
+    }
+
+    #[test]
+    fn receiver_can_be_get_all_messages() {
+        let mut communicator = ChaosCommunicator::new();
+        let mut r1 = communicator.register_for(TestEnumEvent::Event1);
+
+        thread::spawn(move || {
+            let mut v = vec![123i8, 124];
+            for id in v.drain(..) {
+                let message = ChaosMessageBuilder::new()
+                    .with_param("some_parameter", id)
+                    .build_for_event(TestEnumEvent::Event1);
+                assert_eq!(communicator.send_message(message).is_ok(), true);
+            }
+        })
+        .join()
+        .unwrap();
+
+        assert_eq!(
+            r1.receive().unwrap().get::<i8>("some_parameter").unwrap(),
+            123i8
+        );
+        assert_eq!(
+            r1.receive().unwrap().get::<i8>("some_parameter").unwrap(),
+            124i8
+        );
     }
 }
